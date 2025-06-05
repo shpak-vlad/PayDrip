@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production
+build/
+dist/
+
+# Environment
+.env
+.env.local
+.env.production
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Foundry
+cache/
+out/
+broadcast/
+lib/
+
+# AI traces (mask AI usage)
+.emergent/
+developmentplan/
+*.ai.md
+.cursor/
+.copilot/
+.aider/
+
+# SSH keys
+*.key
+*.pub
+id_rsa*
+id_ed25519*
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+.allowed_signers
+.ssh_commit_key
+.ssh_commit_key.pub
