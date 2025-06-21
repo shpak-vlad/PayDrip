@@ -48,10 +48,47 @@ contract PaymentStreamTest is Test {
         assertEq(paymentStream.owner(), owner);
         assertEq(paymentStream.streamCounter(), 0);
         assertEq(paymentStream.platformFee(), 0);
+        assertEq(paymentStream.totalStreamsCreated(), 0);
+        assertEq(paymentStream.totalVolumeStreamed(), 0);
     }
 
     function testProxyUpgradeability() public {
         PaymentStream newImplementation = new PaymentStream();
         paymentStream.upgradeToAndCall(address(newImplementation), "");
+    }
+
+    function testSetPlatformFee() public {
+        uint256 newFee = 100;
+        paymentStream.setPlatformFee(newFee);
+        assertEq(paymentStream.platformFee(), newFee);
+    }
+
+    function testSetPlatformFeeFailsIfTooHigh() public {
+        uint256 tooHighFee = 1001;
+        vm.expectRevert("Fee too high");
+        paymentStream.setPlatformFee(tooHighFee);
+    }
+
+    function testSetFeeCollector() public {
+        address newCollector = makeAddr("collector");
+        paymentStream.setFeeCollector(newCollector);
+        assertEq(paymentStream.feeCollector(), newCollector);
+    }
+
+    function testSetFeeCollectorFailsForZeroAddress() public {
+        vm.expectRevert("Invalid collector");
+        paymentStream.setFeeCollector(address(0));
+    }
+
+    function testOnlyOwnerCanSetFee() public {
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.setPlatformFee(100);
+    }
+
+    function testOnlyOwnerCanSetFeeCollector() public {
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.setFeeCollector(makeAddr("collector"));
     }
 }
