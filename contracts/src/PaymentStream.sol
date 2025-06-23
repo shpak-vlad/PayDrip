@@ -93,5 +93,65 @@ contract PaymentStream is
         emit FeeCollectorUpdated(_collector);
     }
 
+    function createStream(
+        address _recipient,
+        address _token,
+        uint256 _amount,
+        uint256 _duration
+    ) external nonReentrant returns (uint256) {
+        if (_recipient == address(0)) revert InvalidRecipient();
+        if (_recipient == msg.sender) revert InvalidRecipient();
+        if (_amount == 0) revert InvalidAmount();
+        if (_duration == 0) revert InvalidDuration();
+
+        IERC20 token = IERC20(_token);
+        require(token.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+
+        uint256 streamId = streamCounter++;
+        uint256 startTime = block.timestamp;
+        uint256 endTime = startTime + _duration;
+
+        streams[streamId] = Stream({
+            sender: msg.sender,
+            recipient: _recipient,
+            token: _token,
+            amount: _amount,
+            startTime: startTime,
+            endTime: endTime,
+            withdrawn: 0,
+            active: true
+        });
+
+        userStreams[msg.sender].push(streamId);
+        userStreams[_recipient].push(streamId);
+        senderRecipientStreams[msg.sender][_recipient].push(streamId);
+
+        totalStreamsCreated++;
+        totalVolumeStreamed += _amount;
+
+        emit StreamCreated(
+            streamId,
+            msg.sender,
+            _recipient,
+            _token,
+            _amount,
+            startTime,
+            endTime
+        );
+
+        return streamId;
+    }
+
+    function getUserStreams(address _user) external view returns (uint256[] memory) {
+        return userStreams[_user];
+    }
+
+    function getSenderRecipientStreams(
+        address _sender,
+        address _recipient
+    ) external view returns (uint256[] memory) {
+        return senderRecipientStreams[_sender][_recipient];
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
