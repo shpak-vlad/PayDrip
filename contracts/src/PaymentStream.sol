@@ -70,6 +70,36 @@ contract PaymentStream is
     error Unauthorized();
     error StreamNotActive();
     error InsufficientBalance();
+    error NotStreamParticipant();
+    error StreamAlreadyCancelled();
+
+    modifier onlyStreamSender(uint256 streamId) {
+        if (streams[streamId].sender != msg.sender) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyStreamRecipient(uint256 streamId) {
+        if (streams[streamId].recipient != msg.sender) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyStreamParticipant(uint256 streamId) {
+        Stream memory stream = streams[streamId];
+        if (stream.sender != msg.sender && stream.recipient != msg.sender) {
+            revert NotStreamParticipant();
+        }
+        _;
+    }
+
+    modifier streamExists(uint256 streamId) {
+        if (streamId >= streamCounter) revert StreamNotFound();
+        _;
+    }
+
+    modifier streamIsActive(uint256 streamId) {
+        if (!streams[streamId].active) revert StreamNotActive();
+        _;
+    }
 
     function initialize() public initializer {
         __Ownable_init(msg.sender);
