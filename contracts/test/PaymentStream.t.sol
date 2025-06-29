@@ -91,4 +91,117 @@ contract PaymentStreamTest is Test {
         vm.expectRevert();
         paymentStream.setFeeCollector(makeAddr("collector"));
     }
+
+    function testCreateStream() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        uint256 streamId = paymentStream.createStream(
+            recipient,
+            address(token),
+            amount,
+            duration
+        );
+        vm.stopPrank();
+
+        assertEq(streamId, 0);
+        assertEq(paymentStream.streamCounter(), 1);
+        assertEq(paymentStream.totalStreamsCreated(), 1);
+        assertEq(paymentStream.totalVolumeStreamed(), amount);
+    }
+
+    function testCreateStreamFailsWithZeroRecipient() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        vm.expectRevert();
+        paymentStream.createStream(
+            address(0),
+            address(token),
+            amount,
+            duration
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateStreamFailsWithSelfAsRecipient() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        vm.expectRevert();
+        paymentStream.createStream(
+            sender,
+            address(token),
+            amount,
+            duration
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateStreamFailsWithZeroAmount() public {
+        uint256 duration = 30 days;
+
+        vm.startPrank(sender);
+        vm.expectRevert();
+        paymentStream.createStream(
+            recipient,
+            address(token),
+            0,
+            duration
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateStreamFailsWithZeroDuration() public {
+        uint256 amount = 1000 * 10**18;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        vm.expectRevert();
+        paymentStream.createStream(
+            recipient,
+            address(token),
+            amount,
+            0
+        );
+        vm.stopPrank();
+    }
+
+    function testGetUserStreams() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount * 2);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount * 2);
+        
+        paymentStream.createStream(recipient, address(token), amount, duration);
+        paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        uint256[] memory senderStreams = paymentStream.getUserStreams(sender);
+        uint256[] memory recipientStreams = paymentStream.getUserStreams(recipient);
+
+        assertEq(senderStreams.length, 2);
+        assertEq(recipientStreams.length, 2);
+    }
 }
