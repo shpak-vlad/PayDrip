@@ -58,3 +58,4 @@ test-results/
 .allowed_signers
 .ssh_commit_key
 .ssh_commit_key.pub
+scripts/
