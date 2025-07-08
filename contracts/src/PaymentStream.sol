@@ -184,5 +184,63 @@ contract PaymentStream is
         return senderRecipientStreams[_sender][_recipient];
     }
 
+    function withdraw(uint256 streamId) 
+        external 
+        nonReentrant 
+        streamExists(streamId)
+        streamIsActive(streamId)
+        onlyStreamRecipient(streamId)
+        returns (uint256) 
+    {
+        Stream storage stream = streams[streamId];
+        
+        uint256 withdrawable = _calculateWithdrawable(streamId);
+        if (withdrawable == 0) revert InsufficientBalance();
+
+        stream.withdrawn = uint96(uint256(stream.withdrawn) + withdrawable);
+
+        uint256 fee = 0;
+        if (platformFee > 0 && feeCollector != address(0)) {
+            fee = (withdrawable * platformFee) / FEE_DENOMINATOR;
+            uint256 amountAfterFee = withdrawable - fee;
+            
+            IERC20(stream.token).transfer(feeCollector, fee);
+            IERC20(stream.token).transfer(stream.recipient, amountAfterFee);
+        } else {
+            IERC20(stream.token).transfer(stream.recipient, withdrawable);
+        }
+
+        emit Withdrawal(streamId, stream.recipient, withdrawable);
+        
+        return withdrawable;
+    }
+
+    function _calculateWithdrawable(uint256 streamId) internal view returns (uint256) {
+        Stream memory stream = streams[streamId];
+        
+        if (!stream.active) return 0;
+        if (block.timestamp <= stream.startTime) return 0;
+        
+        uint256 elapsed = block.timestamp >= stream.endTime 
+            ? stream.endTime - stream.startTime
+            : block.timestamp - stream.startTime;
+        
+        uint256 duration = stream.endTime - stream.startTime;
+        uint256 totalStreamed = (uint256(stream.amount) * elapsed) / duration;
+        
+        return totalStreamed > stream.withdrawn 
+            ? totalStreamed - stream.withdrawn 
+            : 0;
+    }
+
+    function calculateWithdrawable(uint256 streamId) 
+        external 
+        view 
+        streamExists(streamId)
+        returns (uint256) 
+    {
+        return _calculateWithdrawable(streamId);
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
