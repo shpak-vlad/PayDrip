@@ -242,5 +242,33 @@ contract PaymentStream is
         return _calculateWithdrawable(streamId);
     }
 
+    function cancelStream(uint256 streamId)
+        external
+        nonReentrant
+        streamExists(streamId)
+        streamIsActive(streamId)
+        onlyStreamSender(streamId)
+    {
+        Stream storage stream = streams[streamId];
+        
+        uint256 withdrawable = _calculateWithdrawable(streamId);
+        uint256 refundable = uint256(stream.amount) - uint256(stream.withdrawn) - withdrawable;
+
+        stream.active = false;
+        stream.cancelled = true;
+
+        IERC20 token = IERC20(stream.token);
+        
+        if (withdrawable > 0) {
+            token.transfer(stream.recipient, withdrawable);
+        }
+        
+        if (refundable > 0) {
+            token.transfer(stream.sender, refundable);
+        }
+
+        emit StreamCancelled(streamId, refundable, withdrawable);
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
