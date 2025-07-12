@@ -204,4 +204,82 @@ contract PaymentStreamTest is Test {
         assertEq(senderStreams.length, 2);
         assertEq(recipientStreams.length, 2);
     }
+
+    function testWithdrawal() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 15 days);
+
+        vm.prank(recipient);
+        uint256 withdrawn = paymentStream.withdraw(streamId);
+
+        assertGt(withdrawn, 0);
+        assertEq(token.balanceOf(recipient), withdrawn);
+    }
+
+    function testWithdrawalFailsIfNotRecipient() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 15 days);
+
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.withdraw(streamId);
+    }
+
+    function testCalculateWithdrawable() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 15 days);
+
+        uint256 withdrawable = paymentStream.calculateWithdrawable(streamId);
+        assertApproxEqRel(withdrawable, amount / 2, 0.01e18);
+    }
+
+    function testCancelStream() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 10 days);
+
+        uint256 senderBalanceBefore = token.balanceOf(sender);
+        uint256 recipientBalanceBefore = token.balanceOf(recipient);
+
+        vm.prank(sender);
+        paymentStream.cancelStream(streamId);
+
+        assertGt(token.balanceOf(sender), senderBalanceBefore);
+        assertGt(token.balanceOf(recipient), recipientBalanceBefore);
+    }
 }
