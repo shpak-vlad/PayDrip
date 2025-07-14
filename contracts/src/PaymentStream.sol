@@ -219,18 +219,54 @@ contract PaymentStream is
         Stream memory stream = streams[streamId];
         
         if (!stream.active) return 0;
-        if (block.timestamp <= stream.startTime) return 0;
         
-        uint256 elapsed = block.timestamp >= stream.endTime 
-            ? stream.endTime - stream.startTime
-            : block.timestamp - stream.startTime;
+        uint256 currentTime = block.timestamp;
+        if (currentTime <= stream.startTime) return 0;
+        
+        uint256 elapsed;
+        if (currentTime >= stream.endTime) {
+            elapsed = stream.endTime - stream.startTime;
+        } else {
+            elapsed = currentTime - stream.startTime;
+        }
         
         uint256 duration = stream.endTime - stream.startTime;
-        uint256 totalStreamed = (uint256(stream.amount) * elapsed) / duration;
+        if (duration == 0) return 0;
         
-        return totalStreamed > stream.withdrawn 
-            ? totalStreamed - stream.withdrawn 
-            : 0;
+        uint256 totalStreamed = (uint256(stream.amount) * elapsed) / duration;
+        uint256 withdrawn = uint256(stream.withdrawn);
+        
+        return totalStreamed > withdrawn ? totalStreamed - withdrawn : 0;
+    }
+
+    function getStreamInfo(uint256 streamId) 
+        external 
+        view 
+        streamExists(streamId)
+        returns (
+            address sender,
+            address recipient,
+            address token,
+            uint256 amount,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 withdrawn,
+            bool active,
+            bool cancelled
+        )
+    {
+        Stream memory stream = streams[streamId];
+        return (
+            stream.sender,
+            stream.recipient,
+            stream.token,
+            uint256(stream.amount),
+            uint256(stream.startTime),
+            uint256(stream.endTime),
+            uint256(stream.withdrawn),
+            stream.active,
+            stream.cancelled
+        );
     }
 
     function calculateWithdrawable(uint256 streamId) 
