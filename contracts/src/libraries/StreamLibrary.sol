@@ -11,6 +11,7 @@ library StreamLibrary {
         uint256 endTime;
         uint256 withdrawn;
         bool active;
+        bool cancelled;
     }
 
     enum StreamStatus {
@@ -24,16 +25,15 @@ library StreamLibrary {
         StreamData memory stream,
         uint256 currentTime
     ) internal pure returns (uint256) {
-        if (currentTime <= stream.startTime) {
-            return 0;
-        }
+        if (!stream.active) return 0;
+        if (currentTime <= stream.startTime) return 0;
         
-        if (currentTime >= stream.endTime) {
-            return stream.amount;
-        }
+        uint256 elapsed = currentTime >= stream.endTime 
+            ? stream.endTime - stream.startTime
+            : currentTime - stream.startTime;
         
-        uint256 elapsed = currentTime - stream.startTime;
         uint256 duration = stream.endTime - stream.startTime;
+        if (duration == 0) return 0;
         
         return (stream.amount * elapsed) / duration;
     }
@@ -50,7 +50,7 @@ library StreamLibrary {
         StreamData memory stream,
         uint256 currentTime
     ) internal pure returns (StreamStatus) {
-        if (!stream.active) {
+        if (stream.cancelled || !stream.active) {
             return StreamStatus.Cancelled;
         }
         
@@ -70,5 +70,14 @@ library StreamLibrary {
             && stream.token != address(0)
             && stream.amount > 0
             && stream.endTime > stream.startTime;
+    }
+
+    function calculateRefund(
+        StreamData memory stream,
+        uint256 currentTime
+    ) internal pure returns (uint256 recipientAmount, uint256 senderAmount) {
+        uint256 withdrawable = calculateWithdrawableAmount(stream, currentTime);
+        recipientAmount = withdrawable;
+        senderAmount = stream.amount - stream.withdrawn - withdrawable;
     }
 }
