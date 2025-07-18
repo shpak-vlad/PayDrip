@@ -134,9 +134,15 @@ contract PaymentStream is
         if (_recipient == msg.sender) revert InvalidRecipient();
         if (_amount == 0) revert InvalidAmount();
         if (_duration == 0) revert InvalidDuration();
+        if (_token == address(0)) revert InvalidAmount();
 
         IERC20 token = IERC20(_token);
+        
+        uint256 balanceBefore = token.balanceOf(address(this));
         require(token.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        uint256 balanceAfter = token.balanceOf(address(this));
+        
+        require(balanceAfter - balanceBefore == _amount, "Token transfer mismatch");
 
         uint256 streamId = streamCounter++;
         uint256 startTime = block.timestamp;
