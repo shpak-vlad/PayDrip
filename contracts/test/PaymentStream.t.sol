@@ -282,4 +282,52 @@ contract PaymentStreamTest is Test {
         assertGt(token.balanceOf(sender), senderBalanceBefore);
         assertGt(token.balanceOf(recipient), recipientBalanceBefore);
     }
+
+    function testTokenTransferValidation() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        uint256 contractBalanceBefore = token.balanceOf(address(paymentStream));
+        paymentStream.createStream(recipient, address(token), amount, duration);
+        uint256 contractBalanceAfter = token.balanceOf(address(paymentStream));
+        
+        vm.stopPrank();
+
+        assertEq(contractBalanceAfter - contractBalanceBefore, amount);
+    }
+
+    function testMultipleTokenSupport() public {
+        MockERC20 token2 = new MockERC20();
+        
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        token2.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        token2.approve(address(paymentStream), amount);
+        
+        uint256 streamId1 = paymentStream.createStream(recipient, address(token), amount, duration);
+        uint256 streamId2 = paymentStream.createStream(recipient, address(token2), amount, duration);
+        
+        vm.stopPrank();
+
+        assertEq(streamId2, streamId1 + 1);
+    }
+
+    function testInvalidTokenAddress() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.createStream(recipient, address(0), amount, duration);
+    }
 }
