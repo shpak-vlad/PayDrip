@@ -129,7 +129,7 @@ contract PaymentStream is
         address _token,
         uint256 _amount,
         uint256 _duration
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         if (_recipient == address(0)) revert InvalidRecipient();
         if (_recipient == msg.sender) revert InvalidRecipient();
         if (_amount == 0) revert InvalidAmount();
