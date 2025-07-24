@@ -203,7 +203,9 @@ contract PaymentStream is
         uint256 withdrawable = _calculateWithdrawable(streamId);
         if (withdrawable == 0) revert InsufficientBalance();
 
-        stream.withdrawn = uint96(uint256(stream.withdrawn) + withdrawable);
+        uint256 newWithdrawn = uint256(stream.withdrawn) + withdrawable;
+        require(newWithdrawn <= type(uint96).max, "Withdrawal overflow");
+        stream.withdrawn = uint96(newWithdrawn);
 
         uint256 fee = 0;
         if (platformFee > 0 && feeCollector != address(0)) {
