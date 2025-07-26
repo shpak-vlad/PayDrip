@@ -190,6 +190,78 @@ contract PaymentStream is
         return senderRecipientStreams[_sender][_recipient];
     }
 
+    function createMultipleStreams(
+        address[] calldata _recipients,
+        address _token,
+        uint256[] calldata _amounts,
+        uint256[] calldata _durations
+    ) external nonReentrant whenNotPaused returns (uint256[] memory) {
+        require(_recipients.length == _amounts.length, "Length mismatch");
+        require(_recipients.length == _durations.length, "Length mismatch");
+        require(_recipients.length > 0, "Empty arrays");
+        require(_recipients.length <= 50, "Too many streams");
+
+        uint256[] memory streamIds = new uint256[](_recipients.length);
+        uint256 totalAmount = 0;
+
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            totalAmount += _amounts[i];
+        }
+
+        IERC20 token = IERC20(_token);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        require(token.transferFrom(msg.sender, address(this), totalAmount), "Transfer failed");
+        uint256 balanceAfter = token.balanceOf(address(this));
+        require(balanceAfter - balanceBefore == totalAmount, "Token transfer mismatch");
+
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            if (_recipients[i] == address(0)) revert InvalidRecipient();
+            if (_recipients[i] == msg.sender) revert InvalidRecipient();
+            if (_amounts[i] == 0) revert InvalidAmount();
+            if (_durations[i] == 0) revert InvalidDuration();
+
+            uint256 streamId = streamCounter++;
+            uint256 startTime = block.timestamp;
+            uint256 endTime = startTime + _durations[i];
+
+            require(_amounts[i] <= type(uint96).max, "Amount exceeds uint96");
+            require(endTime <= type(uint32).max, "Timestamp overflow");
+
+            streams[streamId] = Stream({
+                sender: msg.sender,
+                recipient: _recipients[i],
+                token: _token,
+                amount: uint96(_amounts[i]),
+                startTime: uint32(startTime),
+                endTime: uint32(endTime),
+                withdrawn: 0,
+                active: true,
+                cancelled: false
+            });
+
+            userStreams[msg.sender].push(streamId);
+            userStreams[_recipients[i]].push(streamId);
+            senderRecipientStreams[msg.sender][_recipients[i]].push(streamId);
+
+            totalStreamsCreated++;
+            totalVolumeStreamed += _amounts[i];
+
+            emit StreamCreated(
+                streamId,
+                msg.sender,
+                _recipients[i],
+                _token,
+                _amounts[i],
+                startTime,
+                endTime
+            );
+
+            streamIds[i] = streamId;
+        }
+
+        return streamIds;
+    }
+
     function withdraw(uint256 streamId) 
         external 
         nonReentrant 
