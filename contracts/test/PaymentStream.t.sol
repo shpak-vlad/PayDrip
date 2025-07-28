@@ -330,4 +330,58 @@ contract PaymentStreamTest is Test {
         vm.expectRevert();
         paymentStream.createStream(recipient, address(0), amount, duration);
     }
+
+    function testBatchStreamCreation() public {
+        address[] memory recipients = new address[](3);
+        recipients[0] = recipient;
+        recipients[1] = makeAddr("recipient2");
+        recipients[2] = makeAddr("recipient3");
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 1000 * 10**18;
+        amounts[1] = 2000 * 10**18;
+        amounts[2] = 1500 * 10**18;
+
+        uint256[] memory durations = new uint256[](3);
+        durations[0] = 30 days;
+        durations[1] = 60 days;
+        durations[2] = 45 days;
+
+        uint256 totalAmount = amounts[0] + amounts[1] + amounts[2];
+        token.mint(sender, totalAmount);
+
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), totalAmount);
+        
+        uint256[] memory streamIds = paymentStream.createMultipleStreams(
+            recipients,
+            address(token),
+            amounts,
+            durations
+        );
+        vm.stopPrank();
+
+        assertEq(streamIds.length, 3);
+        assertEq(paymentStream.streamCounter(), 3);
+    }
+
+    function testBatchStreamCreationFailsWithMismatchedArrays() public {
+        address[] memory recipients = new address[](3);
+        uint256[] memory amounts = new uint256[](2);
+        uint256[] memory durations = new uint256[](3);
+
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.createMultipleStreams(recipients, address(token), amounts, durations);
+    }
+
+    function testBatchStreamCreationFailsWithTooManyStreams() public {
+        address[] memory recipients = new address[](51);
+        uint256[] memory amounts = new uint256[](51);
+        uint256[] memory durations = new uint256[](51);
+
+        vm.prank(sender);
+        vm.expectRevert();
+        paymentStream.createMultipleStreams(recipients, address(token), amounts, durations);
+    }
 }
