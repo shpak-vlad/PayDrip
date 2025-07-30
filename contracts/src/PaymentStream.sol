@@ -368,19 +368,23 @@ contract PaymentStream is
         Stream storage stream = streams[streamId];
         
         uint256 withdrawable = _calculateWithdrawable(streamId);
-        uint256 refundable = uint256(stream.amount) - uint256(stream.withdrawn) - withdrawable;
+        uint256 totalAmount = uint256(stream.amount);
+        uint256 withdrawn = uint256(stream.withdrawn);
+        uint256 refundable = totalAmount - withdrawn - withdrawable;
 
         stream.active = false;
         stream.cancelled = true;
 
         IERC20 token = IERC20(stream.token);
+        address _recipient = stream.recipient;
+        address _sender = stream.sender;
         
         if (withdrawable > 0) {
-            token.transfer(stream.recipient, withdrawable);
+            token.transfer(_recipient, withdrawable);
         }
         
         if (refundable > 0) {
-            token.transfer(stream.sender, refundable);
+            token.transfer(_sender, refundable);
         }
 
         emit StreamCancelled(streamId, refundable, withdrawable);
