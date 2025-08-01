@@ -259,6 +259,8 @@ contract PaymentStream is
             streamIds[i] = streamId;
         }
 
+        emit BatchStreamsCreated(msg.sender, _recipients.length, totalAmount);
+
         return streamIds;
     }
 
