@@ -384,4 +384,62 @@ contract PaymentStreamTest is Test {
         vm.expectRevert();
         paymentStream.createMultipleStreams(recipients, address(token), amounts, durations);
     }
+
+    function testStreamCreatedEvent() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        
+        vm.expectEmit(true, true, true, true);
+        emit StreamCreated(0, sender, recipient, address(token), amount, block.timestamp, block.timestamp + duration);
+        
+        paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+    }
+
+    function testWithdrawalEvent() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 15 days);
+
+        vm.prank(recipient);
+        vm.expectEmit(true, true, false, false);
+        emit Withdrawal(streamId, recipient, 0);
+        paymentStream.withdraw(streamId);
+    }
+
+    function testCancellationEvent() public {
+        uint256 amount = 1000 * 10**18;
+        uint256 duration = 30 days;
+
+        token.mint(sender, amount);
+        
+        vm.startPrank(sender);
+        token.approve(address(paymentStream), amount);
+        uint256 streamId = paymentStream.createStream(recipient, address(token), amount, duration);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 10 days);
+
+        vm.prank(sender);
+        vm.expectEmit(true, false, false, false);
+        emit StreamCancelled(streamId, 0, 0);
+        paymentStream.cancelStream(streamId);
+    }
+
+    event StreamCreated(uint256 indexed streamId, address indexed sender, address indexed recipient, address token, uint256 amount, uint256 startTime, uint256 endTime);
+    event Withdrawal(uint256 indexed streamId, address indexed recipient, uint256 amount);
+    event StreamCancelled(uint256 indexed streamId, uint256 senderBalance, uint256 recipientBalance);
 }
