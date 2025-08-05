@@ -351,6 +351,27 @@ contract PaymentStream is
         );
     }
 
+    function setStreamMetadata(
+        uint256 streamId,
+        string calldata description,
+        bytes32 category
+    ) external streamExists(streamId) onlyStreamSender(streamId) {
+        streamMetadata[streamId] = StreamMetadata({
+            description: description,
+            category: category
+        });
+    }
+
+    function getStreamMetadata(uint256 streamId)
+        external
+        view
+        streamExists(streamId)
+        returns (string memory description, bytes32 category)
+    {
+        StreamMetadata memory metadata = streamMetadata[streamId];
+        return (metadata.description, metadata.category);
+    }
+
     function calculateWithdrawable(uint256 streamId) 
         external 
         view 
