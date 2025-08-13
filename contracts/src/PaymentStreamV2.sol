@@ -27,8 +27,26 @@ contract PaymentStreamV2 is PaymentStream {
         emit StreamUnpausedEvent(streamId);
     }
 
+    function setStreamRateMultiplier(uint256 streamId, uint256 multiplier)
+        external
+        streamExists(streamId)
+        onlyStreamSender(streamId)
+    {
+        require(multiplier > 0 && multiplier <= 20000, "Invalid multiplier");
+        streamRateMultiplier[streamId] = multiplier;
+        emit RateMultiplierSet(streamId, multiplier);
+    }
+
     function _calculateWithdrawable(uint256 streamId) internal view override returns (uint256) {
         if (streamPaused[streamId]) return 0;
-        return super._calculateWithdrawable(streamId);
+        
+        uint256 baseAmount = super._calculateWithdrawable(streamId);
+        uint256 multiplier = streamRateMultiplier[streamId];
+        
+        if (multiplier > 0) {
+            return (baseAmount * multiplier) / MULTIPLIER_DENOMINATOR;
+        }
+        
+        return baseAmount;
     }
 }
