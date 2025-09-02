@@ -17,3 +17,4 @@ contract StreamTemplate {
         return templateId;
     }
 }
+// Template utilities
