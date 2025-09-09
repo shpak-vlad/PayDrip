@@ -416,3 +416,4 @@ contract PaymentStream is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
 // Gas optimizations applied
+// Fix for zero amount edge case
