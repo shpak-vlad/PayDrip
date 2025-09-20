@@ -1,0 +1,12 @@
+{
+  "name": "paydrip-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ethers": "^6.9.0",
+    "wagmi": "^2.5.0",
+    "@rainbow-me/rainbowkit": "^2.0.0"
+  }
+}
