@@ -7,3 +7,4 @@ export default function WalletConnect() {
     </button>
   );
 }
+// Wallet connection fixes
