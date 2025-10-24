@@ -1,30 +1,29 @@
-# PayDrip
+# PayDrip - Payment Streaming on Base
 
-Decentralized micro-payment streaming platform on Base network. PayDrip enables efficient recurring payments and continuous fund streams using smart contracts with upgradeable proxy pattern.
+Decentralized payment streaming platform built on Base network.
 
 ## Features
+- Continuous payment streams
+- Multi-token support
+- Upgradeable contracts (UUPS)
+- Coinbase Smart Wallet integration
 
-- **Payment Streaming**: Continuous, time-based payment streams
-- **Multi-Token Support**: Stream any ERC-20 token
-- **Upgradeable Contracts**: UUPS proxy pattern for seamless upgrades
-- **Smart Wallet Integration**: Coinbase Smart Wallet support
-- **Base Network**: Built specifically for Base mainnet/testnet
+## Tech Stack
+- **Contracts**: Solidity 0.8.23 + Foundry
+- **Frontend**: React + ethers.js
+- **Network**: Base Sepolia / Base Mainnet
 
-## Architecture
+## Deployment
+Contracts deployed on Base Sepolia testnet.
 
-- **Smart Contracts**: Solidity 0.8.23 with Foundry
-- **Frontend**: React with ethers.js
-- **Backend**: FastAPI for indexing and API
-- **Network**: Base Sepolia (testnet) / Base Mainnet
+## Development
+```bash
+# Contracts
+cd contracts && forge test
 
-## Project Structure
-
+# Frontend
+cd frontend && npm start
 ```
-/app
-├── contracts/          # Smart contracts (Foundry)
-│   ├── src/           # Contract source files
-│   ├── test/          # Contract tests
-│   └── script/        # Deployment scripts
-├── frontend/          # React application
-└── backend/           # FastAPI server
-```
+
+## Security
+See SECURITY.md for security policy.
