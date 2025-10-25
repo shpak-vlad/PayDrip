@@ -1,0 +1,39 @@
+name: Upgrade to V2 (Testnet)
+
+on:
+  workflow_dispatch:
+    inputs:
+      proxy_address:
+        description: 'Proxy Address'
+        required: true
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      
+      - name: Build
+        run: |
+          cd contracts
+          forge install
+          forge build
+      
+      - name: Upgrade
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+          PROXY_ADDRESS: ${{ inputs.proxy_address }}
+        run: |
+          cd contracts
+          forge script script/UpgradeToV2.s.sol \
+            --rpc-url https://sepolia.base.org \
+            --private-key $PRIVATE_KEY \
+            --broadcast \
+            --verify \
+            --etherscan-api-key $BASESCAN_API_KEY

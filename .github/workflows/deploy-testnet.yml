@@ -1,0 +1,45 @@
+name: Deploy to Base Sepolia
+
+on:
+  workflow_dispatch:
+    inputs:
+      verify:
+        description: 'Verify on Basescan'
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      
+      - name: Build & Test
+        run: |
+          cd contracts
+          forge install
+          forge build
+          forge test
+      
+      - name: Deploy
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+        run: |
+          cd contracts
+          forge script script/Deploy.s.sol \
+            --rpc-url https://sepolia.base.org \
+            --private-key $PRIVATE_KEY \
+            --broadcast \
+            ${{ inputs.verify && '--verify --etherscan-api-key $BASESCAN_API_KEY' || '' }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment
+          path: contracts/broadcast/
