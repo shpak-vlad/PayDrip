@@ -17,11 +17,12 @@ contract PaymentStream is
         address sender;
         address recipient;
         address token;
-        uint256 amount;
-        uint256 startTime;
-        uint256 endTime;
-        uint256 withdrawn;
+        uint96 amount;
+        uint32 startTime;
+        uint32 endTime;
+        uint96 withdrawn;
         bool active;
+        bool cancelled;
     }
 
     mapping(uint256 => Stream) public streams;
