@@ -2,6 +2,7 @@
 pragma solidity 0.8.23;
 
 import "forge-std/Test.sol";
+import "../src/PaymentStream.sol";
 import "../src/PaymentStreamV2.sol";
 import "../src/PaymentStreamProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -30,7 +31,7 @@ contract PaymentStreamV2Test is Test {
         PaymentStreamV2 implementation = new PaymentStreamV2();
         
         bytes memory initData = abi.encodeWithSelector(
-            PaymentStreamV2.initialize.selector
+            PaymentStream.initialize.selector
         );
         
         PaymentStreamProxy proxy = new PaymentStreamProxy(
