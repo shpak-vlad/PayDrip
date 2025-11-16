@@ -37,6 +37,13 @@ contract PaymentStream is
     uint256 public constant FEE_DENOMINATOR = 10000;
     uint256 public totalStreamsCreated;
     uint256 public totalVolumeStreamed;
+    
+    struct StreamMetadata {
+        string description;
+        bytes32 category;
+    }
+    
+    mapping(uint256 => StreamMetadata) public streamMetadata;
 
     event StreamCreated(
         uint256 indexed streamId,
@@ -62,6 +69,7 @@ contract PaymentStream is
 
     event FeeUpdated(uint256 newFee);
     event FeeCollectorUpdated(address newCollector);
+    event BatchStreamsCreated(address indexed sender, uint256 count, uint256 totalAmount);
 
     error InvalidRecipient();
     error InvalidAmount();
@@ -129,7 +137,7 @@ contract PaymentStream is
         address _token,
         uint256 _amount,
         uint256 _duration
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         if (_recipient == address(0)) revert InvalidRecipient();
         if (_recipient == msg.sender) revert InvalidRecipient();
         if (_amount == 0) revert InvalidAmount();
@@ -152,11 +160,12 @@ contract PaymentStream is
             sender: msg.sender,
             recipient: _recipient,
             token: _token,
-            amount: _amount,
-            startTime: startTime,
-            endTime: endTime,
+            amount: uint96(_amount),
+            startTime: uint32(startTime),
+            endTime: uint32(endTime),
             withdrawn: 0,
-            active: true
+            active: true,
+            cancelled: false
         });
 
         userStreams[msg.sender].push(streamId);
@@ -195,7 +204,7 @@ contract PaymentStream is
         address _token,
         uint256[] calldata _amounts,
         uint256[] calldata _durations
-    ) external nonReentrant whenNotPaused returns (uint256[] memory) {
+    ) external nonReentrant returns (uint256[] memory) {
         require(_recipients.length == _amounts.length, "Length mismatch");
         require(_recipients.length == _durations.length, "Length mismatch");
         require(_recipients.length > 0, "Empty arrays");

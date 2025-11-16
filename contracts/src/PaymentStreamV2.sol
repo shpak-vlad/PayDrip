@@ -5,9 +5,13 @@ import "./PaymentStream.sol";
 
 contract PaymentStreamV2 is PaymentStream {
     mapping(uint256 => bool) public streamPaused;
+    mapping(uint256 => uint256) public streamRateMultiplier;
+    
+    uint256 public constant MULTIPLIER_DENOMINATOR = 10000;
     
     event StreamPausedEvent(uint256 indexed streamId);
     event StreamUnpausedEvent(uint256 indexed streamId);
+    event RateMultiplierSet(uint256 indexed streamId, uint256 multiplier);
 
     function pauseStream(uint256 streamId) 
         external 
