@@ -306,7 +306,7 @@ contract PaymentStream is
         return withdrawable;
     }
 
-    function _calculateWithdrawable(uint256 streamId) internal view returns (uint256) {
+    function _calculateWithdrawable(uint256 streamId) internal view virtual returns (uint256) {
         Stream memory stream = streams[streamId];
         
         if (!stream.active) return 0;
