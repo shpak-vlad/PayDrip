@@ -11,18 +11,20 @@ jobs:
   upgrade:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+      - uses: actions/checkout@v4
       
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
       
-      - name: Build
+      - name: Install dependencies
         run: |
           cd contracts
-          forge install
-          forge build
+          forge install --no-commit
+      
+      - name: Build contracts
+        run: |
+          cd contracts
+          forge build --force
       
       - name: Upgrade
         env:
@@ -36,4 +38,5 @@ jobs:
             --private-key $PRIVATE_KEY \
             --broadcast \
             --verify \
-            --etherscan-api-key $BASESCAN_API_KEY
+            --etherscan-api-key $BASESCAN_API_KEY \
+            -vvvv

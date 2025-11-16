@@ -12,19 +12,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+      - uses: actions/checkout@v4
       
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
       
-      - name: Build & Test
+      - name: Install dependencies
         run: |
           cd contracts
-          forge install
-          forge build
-          forge test
+          forge install --no-commit
+      
+      - name: Build contracts
+        run: |
+          cd contracts
+          forge build --force
+      
+      - name: Run tests
+        run: |
+          cd contracts
+          forge test -vv
       
       - name: Deploy
         env:
@@ -36,10 +42,12 @@ jobs:
             --rpc-url https://sepolia.base.org \
             --private-key $PRIVATE_KEY \
             --broadcast \
-            ${{ inputs.verify && '--verify --etherscan-api-key $BASESCAN_API_KEY' || '' }}
+            ${{ inputs.verify && '--verify --etherscan-api-key $BASESCAN_API_KEY' || '' }} \
+            -vvvv
       
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: deployment
           path: contracts/broadcast/
