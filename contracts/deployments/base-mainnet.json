@@ -1,0 +1,17 @@
+{
+  "network": "base-mainnet",
+  "chainId": 8453,
+  "contracts": {
+    "PayDrip": {
+      "implementation": "0x3a29a1ede004190f79971d12cd17caeb5a9c780e",
+      "proxy": "0x6f2bd18433b0aea1a10be7af88d3a6bbdd0f8b1e"
+    }
+  },
+  "deployer": "0x59daa17673efc0becdc8819e69830b994fe497fb",
+  "timestamp": "2025-11-28T17:25:41Z",
+  "version": "v1",
+  "explorer": {
+    "implementation": "https://basescan.org/address/0x3a29a1ede004190f79971d12cd17caeb5a9c780e",
+    "proxy": "https://basescan.org/address/0x6f2bd18433b0aea1a10be7af88d3a6bbdd0f8b1e"
+  }
+}

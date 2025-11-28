@@ -1,0 +1,50 @@
+name: Create Test Drips
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network (sepolia/mainnet)'
+        required: true
+        type: choice
+        options:
+          - sepolia
+          - mainnet
+      proxy_address:
+        description: 'PayDrip Proxy Address'
+        required: true
+        type: string
+      token_address:
+        description: 'Token Address (USDC)'
+        required: true
+        type: string
+
+jobs:
+  create-drips:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        run: |
+          cd contracts
+          forge install foundry-rs/forge-std@v1.8.1 --no-git
+          forge install OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-git
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.0.2 --no-git
+
+      - name: Create test drips
+        env:
+          PRIVATE_KEY: ${{ inputs.network == 'mainnet' && secrets.PRIVATE_KEY_MAINNET || secrets.PRIVATE_KEY }}
+          PAYDRIP_PROXY: ${{ inputs.proxy_address }}
+          TOKEN_ADDRESS: ${{ inputs.token_address }}
+        run: |
+          cd contracts
+          RPC_URL=${{ inputs.network == 'mainnet' && 'https://mainnet.base.org' || 'https://sepolia.base.org' }}
+          forge script script/CreateTestDrips.s.sol \
+            --rpc-url $RPC_URL \
+            --private-key $PRIVATE_KEY \
+            --broadcast \
+            -vvvv

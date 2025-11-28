@@ -1,0 +1,17 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "contracts": {
+    "PayDrip": {
+      "implementation": "0x8083dbc0f9cc726dd8701cfbc79be3e6ed3884af",
+      "proxy": "0x6a7ca24625c5ea18ba50515331d81ee350f6b2cc"
+    }
+  },
+  "deployer": "0x59daa17673efc0becdc8819e69830b994fe497fb",
+  "timestamp": "2025-11-28T17:22:44Z",
+  "version": "v1",
+  "explorer": {
+    "implementation": "https://sepolia.basescan.org/address/0x8083dbc0f9cc726dd8701cfbc79be3e6ed3884af",
+    "proxy": "https://sepolia.basescan.org/address/0x6a7ca24625c5ea18ba50515331d81ee350f6b2cc"
+  }
+}
