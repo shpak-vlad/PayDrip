@@ -20,9 +20,9 @@ contract CreateTestDrips is Script {
         address receiver2 = address(0x2222222222222222222222222222222222222222);
         address receiver3 = address(0x3333333333333333333333333333333333333333);
 
-        uint256 amountPerStep = 10 * 10**6;
+        uint256 amountPerStep = 10**5;
         uint256 totalSteps = 10;
-        uint256 interval = 7 days;
+        uint256 interval = 3 days;
 
         uint256 totalAmount = amountPerStep * totalSteps * 3;
         token.approve(payDripProxy, totalAmount);
