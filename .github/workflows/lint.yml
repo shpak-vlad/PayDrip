@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  solhint:
+    name: Solidity Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check formatting
+        working-directory: contracts
+        run: forge fmt --check
+
+      - name: Run Slither (if available)
+        working-directory: contracts
+        continue-on-error: true
+        run: |
+          pip3 install slither-analyzer
+          slither . || echo "Slither analysis completed with warnings"

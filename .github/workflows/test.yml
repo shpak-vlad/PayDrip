@@ -1,0 +1,71 @@
+name: Tests
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        working-directory: contracts
+        run: forge install
+
+      - name: Check contract sizes
+        working-directory: contracts
+        run: forge build --sizes
+
+      - name: Run tests
+        working-directory: contracts
+        run: forge test -vvv
+
+      - name: Run gas report
+        working-directory: contracts
+        run: forge test --gas-report
+
+      - name: Check formatting
+        working-directory: contracts
+        run: forge fmt --check
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        working-directory: contracts
+        run: forge install
+
+      - name: Run coverage
+        working-directory: contracts
+        run: forge coverage --report lcov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./contracts/lcov.info
+          flags: smart-contracts
+          name: smart-contracts-coverage

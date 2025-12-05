@@ -1,0 +1,108 @@
+name: Deploy Integrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network to deploy to'
+        required: true
+        type: choice
+        options:
+          - base-sepolia
+          - base-mainnet
+      dry_run:
+        description: 'Dry run (simulate without broadcasting)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.network }}
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.network }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        working-directory: contracts
+        run: forge install
+
+      - name: Set up environment
+        working-directory: contracts
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.DEPLOYER_PRIVATE_KEY }}" >> .env
+          echo "PAYDRIP_PROXY=${{ secrets.PAYDRIP_PROXY }}" >> .env
+          echo "ORACLE_ADDRESS=${{ secrets.ORACLE_ADDRESS }}" >> .env
+          echo "BASEPAY_PROCESSOR=${{ secrets.BASEPAY_PROCESSOR }}" >> .env
+          echo "BASESCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
+          echo "NETWORK=${{ inputs.network }}" >> .env
+
+          if [ "${{ inputs.network }}" == "base-mainnet" ]; then
+            echo "BASE_RPC_URL=${{ secrets.BASE_MAINNET_RPC_URL }}" >> .env
+          else
+            echo "BASE_RPC_URL=${{ secrets.BASE_SEPOLIA_RPC_URL }}" >> .env
+          fi
+
+      - name: Run tests before deployment
+        working-directory: contracts
+        run: forge test -vv
+
+      - name: Deploy contracts (dry run)
+        if: ${{ inputs.dry_run }}
+        working-directory: contracts
+        run: |
+          forge script script/DeployIntegrations.s.sol \
+            --rpc-url $BASE_RPC_URL \
+            -vvvv
+
+      - name: Deploy contracts (live)
+        if: ${{ !inputs.dry_run }}
+        working-directory: contracts
+        run: |
+          forge script script/DeployIntegrations.s.sol \
+            --rpc-url $BASE_RPC_URL \
+            --broadcast \
+            --verify \
+            -vvvv
+
+      - name: Upload deployment artifacts
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-${{ inputs.network }}-${{ github.sha }}
+          path: contracts/deployments/integrations-${{ inputs.network }}.json
+
+      - name: Comment on PR
+        if: ${{ !inputs.dry_run && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const deployment = JSON.parse(fs.readFileSync('contracts/deployments/integrations-${{ inputs.network }}.json', 'utf8'));
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Deployment Complete - ${{ inputs.network }}
+
+              **Contracts Deployed:**
+              - BasePayDrip: \`${deployment.contracts.BasePayDrip}\`
+              - PaymentLinkFactory: \`${deployment.contracts.PaymentLinkFactory}\`
+              - FiatQuoter: \`${deployment.contracts.FiatQuoter}\`
+
+              **Network:** ${{ inputs.network }}
+              **Timestamp:** ${deployment.timestamp}
+              `
+            })
