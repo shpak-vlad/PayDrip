@@ -130,7 +130,7 @@ contract BasePayDripTest is Test {
         assertEq(pending.token, address(usdc));
     }
 
-    function testFailConfirmPaymentUnauthorized() public {
+    function test_RevertWhen_ConfirmPaymentUnauthorized() public {
         vm.prank(sender);
         (bytes32 paymentId, ) = basePayDrip.initiateDripWithFiat(
             receiver,
@@ -142,10 +142,11 @@ contract BasePayDripTest is Test {
 
         // Should fail - sender is not oracle
         vm.prank(sender);
+        vm.expectRevert();
         basePayDrip.confirmPayment(paymentId, address(usdc));
     }
 
-    function testFailPayment() public {
+    function testPaymentFails() public {
         vm.prank(sender);
         (bytes32 paymentId, ) = basePayDrip.initiateDripWithFiat(
             receiver,
@@ -229,7 +230,7 @@ contract BasePayDripTest is Test {
         assertEq(pendingDrips[1], paymentId2);
     }
 
-    function testFailFinalizeDripNotConfirmed() public {
+    function test_RevertWhen_FinalizeDripNotConfirmed() public {
         vm.prank(sender);
         (bytes32 paymentId, ) = basePayDrip.initiateDripWithFiat(
             receiver,
@@ -241,11 +242,13 @@ contract BasePayDripTest is Test {
 
         // Should fail - payment not confirmed
         vm.prank(sender);
+        vm.expectRevert();
         basePayDrip.finalizeDrip(paymentId);
     }
 
-    function testFailInitiateDripZeroAmount() public {
+    function test_RevertWhen_InitiateDripZeroAmount() public {
         vm.prank(sender);
+        vm.expectRevert();
         basePayDrip.initiateDripWithFiat(
             receiver,
             0,
@@ -255,8 +258,9 @@ contract BasePayDripTest is Test {
         );
     }
 
-    function testFailInitiateDripSameAddress() public {
+    function test_RevertWhen_InitiateDripSameAddress() public {
         vm.prank(sender);
+        vm.expectRevert();
         basePayDrip.initiateDripWithFiat(
             sender,
             AMOUNT_PER_STEP,

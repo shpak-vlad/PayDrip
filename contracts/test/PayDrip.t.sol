@@ -191,23 +191,27 @@ contract PayDripTest is Test {
         assertFalse(active);
     }
 
-    function testFailCreateDripZeroAmount() public {
+    function test_RevertWhen_CreateDripZeroAmount() public {
         vm.prank(sender);
+        vm.expectRevert();
         payDrip.createDrip(0, TOTAL_STEPS, INTERVAL, receiver, address(token));
     }
 
-    function testFailCreateDripZeroSteps() public {
+    function test_RevertWhen_CreateDripZeroSteps() public {
         vm.prank(sender);
+        vm.expectRevert();
         payDrip.createDrip(AMOUNT_PER_STEP, 0, INTERVAL, receiver, address(token));
     }
 
-    function testFailCreateDripZeroInterval() public {
+    function test_RevertWhen_CreateDripZeroInterval() public {
         vm.prank(sender);
+        vm.expectRevert();
         payDrip.createDrip(AMOUNT_PER_STEP, TOTAL_STEPS, 0, receiver, address(token));
     }
 
-    function testFailCreateDripSameAddress() public {
+    function test_RevertWhen_CreateDripSameAddress() public {
         vm.prank(sender);
+        vm.expectRevert();
         payDrip.createDrip(AMOUNT_PER_STEP, TOTAL_STEPS, INTERVAL, sender, address(token));
     }
 }

@@ -233,7 +233,7 @@ contract PaymentLinkFactoryTest is Test {
         assertEq(link.usageCount, 2);
     }
 
-    function testFailPayViaSingleUseLinkTwice() public {
+    function test_RevertWhen_PayViaSingleUseLinkTwice() public {
         uint256 expiry = block.timestamp + 7 days;
 
         vm.prank(creator);
@@ -253,6 +253,7 @@ contract PaymentLinkFactoryTest is Test {
 
         // Second payment should fail
         vm.prank(payer);
+        vm.expectRevert();
         linkFactory.payViaLink(linkId);
     }
 
@@ -279,7 +280,7 @@ contract PaymentLinkFactoryTest is Test {
         assertTrue(link.expiry <= block.timestamp);
     }
 
-    function testFailCancelLinkUnauthorized() public {
+    function test_RevertWhen_CancelLinkUnauthorized() public {
         uint256 expiry = block.timestamp + 7 days;
 
         vm.prank(creator);
@@ -296,6 +297,7 @@ contract PaymentLinkFactoryTest is Test {
 
         // Should fail - payer is not creator
         vm.prank(payer);
+        vm.expectRevert();
         linkFactory.cancelLink(linkId);
     }
 
@@ -407,8 +409,9 @@ contract PaymentLinkFactoryTest is Test {
         assertEq(linkDrips[1], dripId2);
     }
 
-    function testFailCreateLinkZeroAmount() public {
+    function test_RevertWhen_CreateLinkZeroAmount() public {
         vm.prank(creator);
+        vm.expectRevert();
         linkFactory.createPaymentLink(
             receiver,
             0,
@@ -421,8 +424,9 @@ contract PaymentLinkFactoryTest is Test {
         );
     }
 
-    function testFailCreateLinkExpiredTime() public {
+    function test_RevertWhen_CreateLinkExpiredTime() public {
         vm.prank(creator);
+        vm.expectRevert();
         linkFactory.createPaymentLink(
             receiver,
             AMOUNT_PER_STEP,
