@@ -38,48 +38,11 @@ Configure the following secrets in your repository settings (`Settings → Secre
 
 ---
 
-### 2. Deploy Integrations (Manual)
+### 2. Upgrade PayDrip & Deploy Integrations (Manual)
 
-**Purpose:** Deploy BasePayDrip, PaymentLinkFactory, and FiatQuoter contracts
-
-**How to run:**
-
-1. Go to **Actions → Deploy Integrations → Run workflow**
-
-2. Select options:
-   - **Network:** `base-sepolia` (testnet) or `base-mainnet` (production)
-   - **Dry run:** `true` to simulate, `false` to actually deploy
-
-3. Click **Run workflow**
-
-**What happens:**
-
-**Dry Run (recommended first):**
-```bash
-✓ Runs all tests
-✓ Simulates deployment
-✓ Shows what would be deployed
-✗ Does NOT broadcast transactions
-```
-
-**Live Deployment:**
-```bash
-✓ Runs all tests
-✓ Deploys BasePayDrip implementation + proxy
-✓ Deploys PaymentLinkFactory implementation + proxy
-✓ Deploys FiatQuoter implementation + proxy
-✓ Verifies contracts on Basescan
-✓ Saves deployment info to artifacts
-✓ Posts comment with contract addresses
-```
-
-**Artifacts:** Download deployment JSON from workflow run
-
----
-
-### 3. Upgrade PayDrip (Manual)
-
-**Purpose:** Upgrade existing PayDrip proxy to new implementation
+**Purpose:**
+- Upgrade existing PayDrip proxy to new implementation
+- Deploy Base Pay integration contracts (BasePayDrip, PaymentLinkFactory, FiatQuoter)
 
 **⚠️ IMPORTANT:** This upgrades a live contract. Test thoroughly first!
 
@@ -99,7 +62,8 @@ Configure the following secrets in your repository settings (`Settings → Secre
 **Dry Run (ALWAYS run first):**
 ```bash
 ✓ Runs all tests
-✓ Deploys new implementation
+✓ Deploys new PayDrip implementation
+✓ Deploys integration contracts
 ✓ Simulates upgrade transaction
 ✓ Verifies compatibility
 ✗ Does NOT broadcast transactions
@@ -108,11 +72,15 @@ Configure the following secrets in your repository settings (`Settings → Secre
 **Live Upgrade:**
 ```bash
 ✓ Runs all tests
-✓ Deploys new implementation
+✓ Deploys new PayDrip implementation
 ✓ Calls upgradeToAndCall() on proxy
-✓ Verifies upgrade was successful
-✓ Verifies contract on Basescan
-✓ Saves upgrade info to artifacts
+✓ Verifies PayDrip upgrade successful
+✓ Deploys BasePayDrip (implementation + proxy)
+✓ Deploys PaymentLinkFactory (implementation + proxy)
+✓ Deploys FiatQuoter (implementation + proxy)
+✓ Initializes FiatQuoter with default USD rate
+✓ Verifies all contracts on Basescan
+✓ Saves complete deployment info to artifacts
 ```
 
 **Safety checks:**
@@ -124,7 +92,7 @@ Configure the following secrets in your repository settings (`Settings → Secre
 
 ## Manual Deployment (Local)
 
-### Deploy Integrations
+### Upgrade PayDrip & Deploy Integrations
 
 ```bash
 cd contracts
@@ -132,28 +100,15 @@ cd contracts
 # Create .env file
 cp .env.example .env
 
-# Fill in variables:
+# Fill in required variables:
 # PRIVATE_KEY=...
 # PAYDRIP_PROXY=0x6f2bd18433b0aea1a10be7af88d3a6bbdd0f8b1e
+# BASESCAN_API_KEY=...
+# NETWORK=base-mainnet
+#
+# Optional (defaults to deployer address):
 # ORACLE_ADDRESS=...
 # BASEPAY_PROCESSOR=...
-# BASESCAN_API_KEY=...
-
-# Dry run (simulate)
-forge script script/DeployIntegrations.s.sol \
-  --rpc-url $BASE_RPC_URL
-
-# Live deployment
-forge script script/DeployIntegrations.s.sol \
-  --rpc-url $BASE_RPC_URL \
-  --broadcast \
-  --verify
-```
-
-### Upgrade PayDrip
-
-```bash
-cd contracts
 
 # Dry run (simulate)
 forge script script/UpgradePayDrip.s.sol \
