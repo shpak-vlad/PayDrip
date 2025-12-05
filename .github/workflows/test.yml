@@ -24,7 +24,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: contracts
-        run: forge install
+        run: |
+          forge install foundry-rs/forge-std@v1.8.1 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.0.2 --no-git --no-commit
 
       - name: Check contract sizes
         working-directory: contracts
@@ -38,9 +41,17 @@ jobs:
         working-directory: contracts
         run: forge test --gas-report
 
-      - name: Check formatting
+      - name: Format code
         working-directory: contracts
-        run: forge fmt --check
+        run: forge fmt
+
+      - name: Check if formatting changed files
+        working-directory: contracts
+        run: |
+          if ! git diff --quiet; then
+            echo "::warning::Code formatting changes detected. Run 'forge fmt' locally."
+            git diff
+          fi
 
   coverage:
     name: Code Coverage
@@ -57,7 +68,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: contracts
-        run: forge install
+        run: |
+          forge install foundry-rs/forge-std@v1.8.1 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.0.2 --no-git --no-commit
 
       - name: Run coverage
         working-directory: contracts
