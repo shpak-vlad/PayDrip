@@ -46,14 +46,14 @@ contract UpgradePayDrip is Script {
 
         PayDrip proxy = PayDrip(payDripProxy);
         proxy.upgradeToAndCall(address(newImplementation), "");
-        console.log("✓ PayDrip proxy upgraded");
+        console.log("[OK] PayDrip proxy upgraded");
 
         // Verify upgrade
         bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         bytes32 implSlot = vm.load(payDripProxy, IMPLEMENTATION_SLOT);
         address currentImpl = address(uint160(uint256(implSlot)));
         require(currentImpl == address(newImplementation), "PayDrip upgrade failed!");
-        console.log("✓ Upgrade verified\n");
+        console.log("[OK] Upgrade verified\n");
 
         // STEP 2: Deploy BasePayDrip
         console.log("STEP 2: Deploying BasePayDrip...");
@@ -74,7 +74,7 @@ contract UpgradePayDrip is Script {
             basePayDripInitData
         );
         console.log("BasePayDrip proxy:", address(basePayDripProxy));
-        console.log("✓ BasePayDrip deployed\n");
+        console.log("[OK] BasePayDrip deployed\n");
 
         // STEP 3: Deploy FiatQuoter
         console.log("STEP 3: Deploying FiatQuoter...");
@@ -97,7 +97,7 @@ contract UpgradePayDrip is Script {
         // Initialize FiatQuoter with default rates
         FiatQuoter fiatQuoter = FiatQuoter(address(fiatQuoterProxy));
         fiatQuoter.updateRate("USD", 1_000000); // 1 USD = 1 USDC (6 decimals)
-        console.log("✓ FiatQuoter deployed & initialized\n");
+        console.log("[OK] FiatQuoter deployed & initialized\n");
 
         // STEP 4: Deploy PaymentLinkFactory
         console.log("STEP 4: Deploying PaymentLinkFactory...");
@@ -117,7 +117,7 @@ contract UpgradePayDrip is Script {
             linkFactoryInitData
         );
         console.log("PaymentLinkFactory proxy:", address(linkFactoryProxy));
-        console.log("✓ PaymentLinkFactory deployed\n");
+        console.log("[OK] PaymentLinkFactory deployed\n");
 
         vm.stopBroadcast();
 
