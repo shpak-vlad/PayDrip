@@ -1,174 +1,84 @@
-# PayDrip
+# PayDrip 💧
 
-Programmable micro-payment pipeline for Base. Discrete step-based payments with interval control, variable amounts, and event-driven execution.
+> Programmable micro-payment pipeline on Base L2. Create recurring payments, subscriptions, vesting, and more with fiat on-ramp support.
 
-## Architecture
+[![Base](https://img.shields.io/badge/Base-0052FF?style=for-the-badge&logo=ethereum&logoColor=white)](https://base.org)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.23-363636?style=for-the-badge&logo=solidity)](https://soliditylang.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-PayDrip implements a **step-based payment system** fundamentally different from continuous streaming. Each drip is a sequence of discrete micro-payments executed at specific intervals or triggers.
+## 🚀 Features
 
-### Core Model
+### Core Functionality
+- **📅 Discrete Step Payments** - Execute payments at specific intervals or events
+- **💰 Fiat On-Ramp** - Pay with credit card via Base Pay integration
+- **🔗 Payment Links** - Share payment links for easy subscriptions
+- **💱 Real-time Quotes** - Fiat-to-crypto conversion with multiple currencies
+- **🔄 UUPS Upgradeable** - Future-proof smart contracts
+- **⚡ Gas Optimized** - Efficient on Base L2
 
-```solidity
-Drip {
-  amountPerStep: 100 USDC
-  totalSteps: 10
-  interval: 7 days
-  currentStep: 0/10
-}
+### Use Cases
+- 📺 **Creator Subscriptions** - Monthly payments to content creators
+- 👥 **Team Vesting** - Token distribution for team members
+- 🏢 **Service Payments** - Weekly/monthly service invoices
+- 💳 **Usage-Based Billing** - Event-driven payment execution
+- 🎁 **Recurring Donations** - Automated charitable giving
+
+## 📦 Quick Start
+
+### For Users
+
+#### 1. Create a Drip with Crypto
+
+```javascript
+import { PayDrip } from '@paydrip/sdk';
+
+const drip = await payDrip.createDrip({
+  receiver: '0xReceiverAddress',
+  amountPerStep: '100', // 100 USDC
+  totalSteps: 12,
+  interval: 30 * 24 * 60 * 60, // 30 days
+  token: USDC_ADDRESS
+});
+// 💸 12 monthly payments of 100 USDC
 ```
 
-**Execution Flow:**
-1. Create drip → locks total funds (100 × 10 = 1000 USDC)
-2. Execute step 1 → transfers 100 USDC after 0 days
-3. Execute step 2 → transfers 100 USDC after 7 days
-4. ... continues until step 10
-5. Drip completed → all funds distributed
+#### 2. Create a Drip with Fiat (Credit Card)
 
-### UUPS Upgradeable
+```javascript
+const { paymentId, checkoutUrl } = await basePayDrip.initiateDripWithFiat({
+  receiver: '0xReceiverAddress',
+  amountPerStep: '50',
+  totalSteps: 6,
+  interval: 7 * 24 * 60 * 60, // 7 days
+  returnUrl: 'https://yourapp.com/success'
+});
 
-```
-┌─────────────────┐
-│  PayDrip Proxy  │ ← User interacts (address never changes)
-└────────┬────────┘
-         │ delegatecall
-         ▼
-┌─────────────────┐
-│ Implementation  │ ← Can be upgraded
-│   (V1, V2...)   │
-└─────────────────┘
+// Redirect user to checkoutUrl for credit card payment
+window.location.href = checkoutUrl;
 ```
 
-**One proxy per network, upgrades change implementation only.**
+#### 3. Create a Payment Link
 
-## Contracts
+```javascript
+const linkId = await linkFactory.createPaymentLink({
+  receiver: '0xReceiverAddress',
+  amountPerStep: '25',
+  totalSteps: 4,
+  interval: 14 * 24 * 60 * 60, // 14 days
+  expiry: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+  memo: 'Premium Subscription',
+  multiUse: true
+});
 
-### PayDrip.sol
-Core logic with DripModule and StepModule:
-
-**DripModule:**
-- `createDrip(amountPerStep, totalSteps, interval, receiver, token)`
-- `getDrip(dripId)`
-- `cancelDrip(dripId)`
-
-**StepModule:**
-- `executeStep(dripId)` with interval validation
-- Tracks `currentStep` and `lastExecuted`
-- Auto-completes when `currentStep == totalSteps`
-
-**Storage:**
-- 50 slots reserved for future upgrades (`__gap`)
-- UUPS pattern via OpenZeppelin
-
-### PaymentStreamProxy.sol
-Standard ERC1967 proxy for UUPS pattern.
-
-## Usage
-
-### Create Drip
-
-```solidity
-// 10 payments of 50 USDC every 14 days
-uint256 dripId = payDrip.createDrip(
-    50e6,        // 50 USDC (6 decimals)
-    10,          // 10 steps
-    14 days,     // interval
-    0xReceiver,  // recipient
-    USDC_ADDRESS // token
-);
+// Share link: https://paydrip.app/pay/{linkId}
 ```
 
-### Execute Step
-
-```solidity
-// Manual execution
-bool success = payDrip.executeStep(dripId);
-// Returns false if interval hasn't passed
-
-// Automated via Gelato/Chainlink
-contract Executor {
-    function execute(uint256 dripId) external {
-        payDrip.executeStep(dripId);
-    }
-}
-```
-
-### Query State
-
-```solidity
-(
-    address sender,
-    address receiver,
-    address token,
-    uint256 amountPerStep,
-    uint256 totalSteps,
-    uint256 currentStep,  // 0-10
-    uint256 interval,
-    uint256 lastExecuted,
-    bool active
-) = payDrip.getDrip(dripId);
-
-// Progress: currentStep / totalSteps
-// Next execution: lastExecuted + interval
-```
-
-### Cancel & Refund
-
-```solidity
-// Sender can cancel anytime
-payDrip.cancelDrip(dripId);
-// Refunds: (totalSteps - currentStep) * amountPerStep
-```
-
-## Use Cases
-
-**Creator Subscriptions**
-```solidity
-createDrip(10e6, 12, 30 days, creator, USDC);
-// 10 USDC monthly for 1 year
-```
-
-**Team Vesting**
-```solidity
-createDrip(25000e18, 4, 90 days, member, TOKEN);
-// 25k tokens quarterly for 1 year
-```
-
-**Service Payments**
-```solidity
-createDrip(100e6, 24, 7 days, provider, USDC);
-// 100 USDC weekly for 24 weeks
-```
-
-**Usage-Based Billing**
-```solidity
-// Trigger on events instead of time
-contract UsageBilling {
-    function onServiceUsed(uint256 dripId) external {
-        payDrip.executeStep(dripId);
-    }
-}
-```
-
-## Events
-
-```solidity
-event DripCreated(dripId, sender, receiver, token, amountPerStep, totalSteps, interval)
-event StepExecuted(dripId, stepNumber, amount, receiver)
-event DripCompleted(dripId)
-event DripCancelled(dripId, refundAmount)
-```
-
-## Networks
-
-**Base Sepolia:** Testing and development
-**Base Mainnet:** Production deployments
-
-Deployment addresses in `contracts/deployments/*.json`
-
-## Development
+### For Developers
 
 ```bash
-cd contracts
+# Clone repository
+git clone https://github.com/shpak-vlad/PayDrip.git
+cd PayDrip/contracts
 
 # Install dependencies
 forge install
@@ -176,50 +86,188 @@ forge install
 # Run tests
 forge test -vv
 
-# Build
-forge build
+# Deploy
+forge script script/Deploy.s.sol --rpc-url base --broadcast
 ```
 
-## Integration
+## 🏗️ Architecture
 
-### Frontend Example
+### Core Contracts
 
-```javascript
-const drip = await payDrip.createDrip(
-    ethers.parseUnits("100", 6),  // 100 USDC
-    10,
-    7 * 24 * 60 * 60,  // 7 days
-    receiverAddress,
-    USDC_ADDRESS
+#### PayDrip.sol
+Main contract for drip creation and execution.
+
+```solidity
+struct Drip {
+  address sender;
+  address receiver;
+  address token;
+  uint96 amountPerStep;
+  uint32 totalSteps;
+  uint32 currentStep;
+  uint32 interval;
+  uint64 lastExecuted;
+  bool active;
+}
+```
+
+#### BasePayDrip.sol
+Fiat on-ramp integration via Base Pay API.
+
+**Features:**
+- Credit card to crypto conversion
+- Oracle-based payment confirmation
+- Automatic drip creation after payment
+
+#### PaymentLinkFactory.sol
+Generate shareable payment links.
+
+**Features:**
+- Single-use or multi-use links
+- Crypto and fiat payment options
+- Link expiration and validation
+
+#### FiatQuoter.sol
+Real-time fiat-to-crypto quotes.
+
+**Features:**
+- Support for USD, EUR, GBP
+- Oracle-based rate updates
+- Fee calculation
+
+### Execution Flow
+
+```
+┌──────────────┐
+│ User creates │
+│    drip      │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     ┌─────────────┐
+│ Lock funds   │────▶│ Step 1      │
+│ (1000 USDC)  │     │ Transfer    │
+└──────────────┘     │ 100 USDC    │
+                     └──────┬──────┘
+                            │ Wait 30 days
+                            ▼
+                     ┌─────────────┐
+                     │ Step 2      │
+                     │ Transfer    │
+                     │ 100 USDC    │
+                     └──────┬──────┘
+                            │ ...
+                            ▼
+                     ┌─────────────┐
+                     │ Step 10     │
+                     │ Completed   │
+                     └─────────────┘
+```
+
+## 🌐 Deployments
+
+### Base Mainnet
+- **PayDrip Proxy**: `0x6f2bd18433b0aea1a10be7af88d3a6bbdd0f8b1e`
+- **USDC**: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- **BasePayDrip**: TBD
+- **PaymentLinkFactory**: TBD
+- **FiatQuoter**: TBD
+
+### Base Sepolia (Testnet)
+- **PayDrip Proxy**: See `contracts/deployments/base-sepolia.json`
+
+## 📖 Documentation
+
+- [Base Pay Integration Guide](contracts/docs/BASE_PAY_INTEGRATION.md)
+- [Deployment Guide](contracts/DEPLOYMENT.md)
+- [Security](contracts/SECURITY.md)
+- [Testing](contracts/TESTING.md)
+- [Gas Report](contracts/GAS_REPORT.md)
+
+## 🔐 Security
+
+- ✅ UUPS Upgradeable pattern
+- ✅ ReentrancyGuard on all external functions
+- ✅ Oracle verification for fiat payments
+- ✅ Payment timeout protection (24 hours)
+- ✅ Comprehensive test coverage
+
+**Audit Status**: Pending
+
+## 🛠️ Tech Stack
+
+- **Blockchain**: Base L2 (Optimistic Rollup)
+- **Language**: Solidity 0.8.23
+- **Framework**: Foundry
+- **Libraries**: OpenZeppelin Upgradeable
+- **Integration**: Base Pay API
+
+## 💡 Examples
+
+### Monthly Subscription
+
+```solidity
+// User subscribes to premium content
+payDrip.createDrip(
+    10e6,        // 10 USDC/month
+    12,          // 12 months
+    30 days,     // Monthly
+    creator,
+    USDC
 );
-
-// Monitor progress
-payDrip.on("StepExecuted", (dripId, step, amount) => {
-    console.log(`Step ${step} executed: ${amount}`);
-});
 ```
 
-### Automation Example
+### Team Vesting
 
-```javascript
-// Chainlink Automation compatible
-function checkUpkeep(bytes calldata checkData) external view returns (bool, bytes memory) {
-    uint256 dripId = abi.decode(checkData, (uint256));
-    (,,,,,, uint256 interval, uint256 lastExecuted, bool active) = payDrip.getDrip(dripId);
-
-    bool needsExecution = active && (block.timestamp >= lastExecuted + interval);
-    return (needsExecution, checkData);
-}
-
-function performUpkeep(bytes calldata performData) external {
-    uint256 dripId = abi.decode(performData, (uint256));
-    payDrip.executeStep(dripId);
-}
+```solidity
+// 100k tokens vesting quarterly over 1 year
+payDrip.createDrip(
+    25000e18,    // 25k tokens
+    4,           // 4 quarters
+    90 days,     // Quarterly
+    teamMember,
+    TOKEN
+);
 ```
 
-## Tech Stack
+### Service Payment
 
-- Solidity 0.8.23
-- Foundry
-- OpenZeppelin Upgradeable
-- Base L2
+```solidity
+// Weekly service payment for 6 months
+payDrip.createDrip(
+    100e6,       // 100 USDC/week
+    24,          // 24 weeks
+    7 days,      // Weekly
+    provider,
+    USDC
+);
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details
+
+## 🔗 Links
+
+- **Website**: https://paydrip.app (coming soon)
+- **Documentation**: https://docs.paydrip.app (coming soon)
+- **Base**: https://base.org
+- **GitHub**: https://github.com/shpak-vlad/PayDrip
+
+## 🙏 Acknowledgments
+
+Built on [Base](https://base.org) - the secure, low-cost, builder-friendly Ethereum L2 by Coinbase.
+
+---
+
+**Made with ❤️ for the Base ecosystem**
