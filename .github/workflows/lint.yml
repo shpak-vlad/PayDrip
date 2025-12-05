@@ -18,9 +18,16 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Check formatting
+      - name: Install dependencies
         working-directory: contracts
-        run: forge fmt --check
+        run: |
+          forge install foundry-rs/forge-std@v1.8.1 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.0.2 --no-git --no-commit
+
+      - name: Format code
+        working-directory: contracts
+        run: forge fmt
 
       - name: Run Slither (if available)
         working-directory: contracts
