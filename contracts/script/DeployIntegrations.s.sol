@@ -15,8 +15,10 @@ contract DeployIntegrations is Script {
         address payDripProxy = vm.envAddress("PAYDRIP_PROXY");
 
         // Oracle and Base Pay processor addresses
-        address oracle = vm.envOr("ORACLE_ADDRESS", msg.sender);
-        address basePayProcessor = vm.envOr("BASEPAY_PROCESSOR", msg.sender);
+        // Default to deployer address if not set (recommended for MVP)
+        address deployer = vm.addr(deployerPrivateKey);
+        address oracle = vm.envOr("ORACLE_ADDRESS", deployer);
+        address basePayProcessor = vm.envOr("BASEPAY_PROCESSOR", deployer);
 
         vm.startBroadcast(deployerPrivateKey);
 
