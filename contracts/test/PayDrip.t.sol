@@ -214,4 +214,308 @@ contract PayDripTest is Test {
         vm.expectRevert();
         payDrip.createDrip(AMOUNT_PER_STEP, TOTAL_STEPS, INTERVAL, sender, address(token));
     }
+
+    function testSingleStepDrip() public {
+        uint256 singleStep = 1;
+        uint256 amount = 500 * 10**18;
+
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            amount,
+            singleStep,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        uint256 balanceBefore = token.balanceOf(receiver);
+        bool executed = payDrip.executeStep(dripId);
+        assertTrue(executed);
+
+        uint256 balanceAfter = token.balanceOf(receiver);
+        assertEq(balanceAfter - balanceBefore, amount);
+
+        (, , , , , , , , bool active) = payDrip.getDrip(dripId);
+        assertFalse(active);
+    }
+
+    function testMultipleRapidExecuteAttempts() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            TOTAL_STEPS,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        bool first = payDrip.executeStep(dripId);
+        assertTrue(first);
+
+        bool second = payDrip.executeStep(dripId);
+        assertFalse(second);
+
+        bool third = payDrip.executeStep(dripId);
+        assertFalse(third);
+
+        (, , , , , uint256 currentStep, , , ) = payDrip.getDrip(dripId);
+        assertEq(currentStep, 1);
+    }
+
+    function testExactFundAccountingFullLifecycle() public {
+        uint256 totalAmount = AMOUNT_PER_STEP * TOTAL_STEPS;
+        uint256 contractBalanceBefore = token.balanceOf(address(payDrip));
+
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            TOTAL_STEPS,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        uint256 contractBalanceAfterCreate = token.balanceOf(address(payDrip));
+        assertEq(contractBalanceAfterCreate - contractBalanceBefore, totalAmount);
+
+        uint256 receiverBalance = 0;
+        for (uint256 i = 0; i < TOTAL_STEPS; i++) {
+            if (i > 0) {
+                vm.warp(block.timestamp + INTERVAL);
+            }
+            payDrip.executeStep(dripId);
+            receiverBalance += AMOUNT_PER_STEP;
+        }
+
+        assertEq(token.balanceOf(receiver), receiverBalance);
+        assertEq(token.balanceOf(address(payDrip)), contractBalanceBefore);
+    }
+
+    function testVeryShortInterval() public {
+        uint256 shortInterval = 1;
+
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            3,
+            shortInterval,
+            receiver,
+            address(token)
+        );
+
+        payDrip.executeStep(dripId);
+
+        vm.warp(block.timestamp + shortInterval);
+        bool executed = payDrip.executeStep(dripId);
+        assertTrue(executed);
+    }
+
+    function testVeryLongInterval() public {
+        uint256 longInterval = 365 days * 10;
+
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            2,
+            longInterval,
+            receiver,
+            address(token)
+        );
+
+        payDrip.executeStep(dripId);
+
+        vm.warp(block.timestamp + longInterval - 1);
+        bool notYet = payDrip.executeStep(dripId);
+        assertFalse(notYet);
+
+        vm.warp(block.timestamp + 1);
+        bool executed = payDrip.executeStep(dripId);
+        assertTrue(executed);
+    }
+
+    function testExactIntervalBoundary() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            3,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        payDrip.executeStep(dripId);
+        uint256 executionTime = block.timestamp;
+
+        vm.warp(executionTime + INTERVAL - 1);
+        bool tooEarly = payDrip.executeStep(dripId);
+        assertFalse(tooEarly);
+
+        vm.warp(executionTime + INTERVAL);
+        bool exact = payDrip.executeStep(dripId);
+        assertTrue(exact);
+    }
+
+    function test_RevertWhen_ExecuteCompletedDrip() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            2,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        payDrip.executeStep(dripId);
+        vm.warp(block.timestamp + INTERVAL);
+        payDrip.executeStep(dripId);
+
+        vm.expectRevert();
+        payDrip.executeStep(dripId);
+    }
+
+    function testCancelBeforeFirstStep() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            TOTAL_STEPS,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        uint256 senderBalanceBefore = token.balanceOf(sender);
+
+        vm.prank(sender);
+        payDrip.cancelDrip(dripId);
+
+        uint256 senderBalanceAfter = token.balanceOf(sender);
+        assertEq(senderBalanceAfter - senderBalanceBefore, AMOUNT_PER_STEP * TOTAL_STEPS);
+
+        (, , , , , , , , bool active) = payDrip.getDrip(dripId);
+        assertFalse(active);
+    }
+
+    function test_RevertWhen_CancelAlreadyCancelledDrip() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            TOTAL_STEPS,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        vm.prank(sender);
+        payDrip.cancelDrip(dripId);
+
+        vm.prank(sender);
+        vm.expectRevert();
+        payDrip.cancelDrip(dripId);
+    }
+
+    function test_RevertWhen_CancelByNonSender() public {
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            TOTAL_STEPS,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        vm.prank(receiver);
+        vm.expectRevert();
+        payDrip.cancelDrip(dripId);
+    }
+
+    function testVariableAmountsExactAccounting() public {
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 100 * 10**18;
+        amounts[1] = 250 * 10**18;
+        amounts[2] = 500 * 10**18;
+
+        uint256 receiverStartBalance = token.balanceOf(receiver);
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            vm.prank(sender);
+            uint256 dripId = payDrip.createDrip(
+                amounts[i],
+                2,
+                INTERVAL,
+                receiver,
+                address(token)
+            );
+
+            payDrip.executeStep(dripId);
+            vm.warp(block.timestamp + INTERVAL);
+            payDrip.executeStep(dripId);
+        }
+
+        uint256 expectedTotal = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            expectedTotal += amounts[i] * 2;
+        }
+
+        assertEq(token.balanceOf(receiver) - receiverStartBalance, expectedTotal);
+    }
+
+    function testLargeValuesWithinLimits() public {
+        uint256 largeAmount = uint256(type(uint96).max) / 100;
+        uint256 largeSteps = 100;
+        uint256 largeInterval = 30 days;
+
+        vm.prank(sender);
+        token.mint(sender, largeAmount * largeSteps);
+
+        vm.prank(sender);
+        uint256 dripId = payDrip.createDrip(
+            largeAmount,
+            largeSteps,
+            largeInterval,
+            receiver,
+            address(token)
+        );
+
+        (, , , uint256 storedAmount, uint256 storedSteps, , uint256 storedInterval, , ) = payDrip.getDrip(dripId);
+        assertEq(storedAmount, largeAmount);
+        assertEq(storedSteps, largeSteps);
+        assertEq(storedInterval, largeInterval);
+    }
+
+    function testMultipleDripsIndependentExecution() public {
+        vm.prank(sender);
+        uint256 dripId1 = payDrip.createDrip(
+            AMOUNT_PER_STEP,
+            3,
+            INTERVAL,
+            receiver,
+            address(token)
+        );
+
+        vm.prank(sender);
+        uint256 dripId2 = payDrip.createDrip(
+            AMOUNT_PER_STEP * 2,
+            2,
+            INTERVAL / 2,
+            receiver,
+            address(token)
+        );
+
+        payDrip.executeStep(dripId1);
+        payDrip.executeStep(dripId2);
+
+        vm.warp(block.timestamp + INTERVAL / 2);
+
+        bool drip1Result = payDrip.executeStep(dripId1);
+        assertFalse(drip1Result);
+
+        bool drip2Result = payDrip.executeStep(dripId2);
+        assertTrue(drip2Result);
+
+        (, , , , , uint256 step1, , , ) = payDrip.getDrip(dripId1);
+        (, , , , , uint256 step2, , , ) = payDrip.getDrip(dripId2);
+
+        assertEq(step1, 1);
+        assertEq(step2, 2);
+    }
 }
