@@ -103,7 +103,7 @@ contract BasePayDrip is
         address _oracle,
         address _basePayProcessor
     ) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
 

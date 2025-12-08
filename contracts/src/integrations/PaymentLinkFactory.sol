@@ -81,7 +81,7 @@ contract PaymentLinkFactory is
     error LinkNotActive();
 
     function initialize(address _payDrip, address _basePayDrip) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
 

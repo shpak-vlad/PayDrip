@@ -69,7 +69,7 @@ contract FiatQuoter is
     }
 
     function initialize(address _oracle) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __UUPSUpgradeable_init();
 
         oracle = _oracle;

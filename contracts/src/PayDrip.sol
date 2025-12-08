@@ -72,7 +72,7 @@ contract PayDrip is
     }
 
     function initialize() public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
 
