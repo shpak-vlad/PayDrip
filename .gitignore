@@ -35,7 +35,6 @@ ENV/
 cache/
 out/
 broadcast/
-lib/
 
 # AI traces (mask AI usage)
 .emergent/
