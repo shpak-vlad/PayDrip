@@ -1,0 +1,109 @@
+name: Upgrade PayDrip
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network to upgrade on'
+        required: true
+        type: choice
+        options:
+          - base-sepolia
+          - base-mainnet
+      dry_run:
+        description: 'Dry run (simulate without broadcasting)'
+        required: false
+        type: boolean
+        default: true
+      confirmation:
+        description: 'Type "UPGRADE" to confirm'
+        required: true
+        type: string
+
+jobs:
+  upgrade:
+    name: Upgrade PayDrip on ${{ inputs.network }}
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.network }}
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirmation }}" != "UPGRADE" ]; then
+            echo "❌ Confirmation failed. Type 'UPGRADE' to proceed."
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set up environment
+        working-directory: contracts
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.DEPLOYER_PRIVATE_KEY }}" >> .env
+          echo "PAYDRIP_PROXY=${{ secrets.PAYDRIP_PROXY }}" >> .env
+          echo "BASESCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
+          echo "NETWORK=${{ inputs.network }}" >> .env
+
+          if [ "${{ inputs.network }}" == "base-mainnet" ]; then
+            echo "BASE_RPC_URL=${{ secrets.BASE_MAINNET_RPC_URL }}" >> .env
+          else
+            echo "BASE_RPC_URL=${{ secrets.BASE_SEPOLIA_RPC_URL }}" >> .env
+          fi
+
+      - name: Run tests before upgrade
+        working-directory: contracts
+        run: forge test -vv
+
+      - name: Upgrade contract (dry run)
+        if: ${{ inputs.dry_run }}
+        working-directory: contracts
+        run: |
+          echo "🔍 DRY RUN - Simulating upgrade..."
+          forge script script/UpgradePayDrip.s.sol \
+            --rpc-url $BASE_RPC_URL \
+            -vvvv
+
+      - name: Upgrade contract (live)
+        if: ${{ !inputs.dry_run }}
+        working-directory: contracts
+        run: |
+          echo "🚀 LIVE UPGRADE - Broadcasting transaction..."
+          forge script script/UpgradePayDrip.s.sol \
+            --rpc-url $BASE_RPC_URL \
+            --broadcast \
+            --verify \
+            -vvvv
+
+      - name: Upload upgrade artifacts
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: upgrade-${{ inputs.network }}-${{ github.sha }}
+          path: contracts/deployments/upgrade-${{ inputs.network }}-*.json
+
+      - name: Create upgrade summary
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "## ✅ Upgrade Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Network:** ${{ inputs.network }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Proxy Address:** ${{ secrets.PAYDRIP_PROXY }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "New implementation has been deployed and proxy upgraded." >> $GITHUB_STEP_SUMMARY
+
+      - name: Send notification
+        if: ${{ !inputs.dry_run }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log('✅ PayDrip upgraded successfully on ${{ inputs.network }}');
